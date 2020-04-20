@@ -1,6 +1,10 @@
 package main
 import (
 	"fmt"
+	"golang.org/x/crypto/ssh"
+	//"io/ioutil"
+	// "io"
+	// "os"
 )
 
 /** One type of controller scheduling property **/
@@ -54,5 +58,70 @@ func (c *Controller) Execute(filePath string) int {
 	// Add the SSH logic in here accordingly
 	// Think about security or something probably
 	fmt.Printf("d.id: %d\n", d.ID)
+	_, err := ConnectToDevice(d.IPAddress)
+	if err != nil {
+		panic(err)
+	}
+
 	return 0
 }
+
+/* Special thanks to https://medium.com/tarkalabs/ssh-recipes-in-go-part-one-5f5a44417282 */
+func ConnectToDevice(hostname string) (*ssh.Session, error) {
+	// key, err := ioutil.ReadFile("/u/vkarthik/.ssh/id_rsa")
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	// signer, err := ssh.ParsePrivateKey(key)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// Temporary placeholder, log into the machines
+	config := &ssh.ClientConfig {
+		User: "vkarthik",
+		Auth: []ssh.AuthMethod{ 
+			ssh.Password(""),
+		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+	fmt.Println("created client config")
+	conn, err := ssh.Dial("tcp", "128.83.144.171:22", config)
+
+	if err != nil {
+		return nil, err
+	}
+
+	sess, err := conn.NewSession()
+	defer sess.Close()
+
+	if err != nil {
+		return nil, err
+	}
+	
+	err = sess.Run("ls") // eg., /usr/bin/whoami
+	if err != nil {
+		return nil, err
+	}
+
+	return sess, nil
+}
+
+func SCPToDevice() {
+	// Need to copy over 
+}
+// func ShowSSHOutput() {
+// 	// Show the std out from the SSH connection
+// 	sessStdOut, err := sess.StdoutPipe()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	go io.Copy(os.Stdout, sessStdOut)
+
+// 	// Show the std error from the SSH connection
+// 	sessStderr, err := sess.StderrPipe()
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	go io.Copy(os.Stderr, sessStderr)
+// }
