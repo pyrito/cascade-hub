@@ -1,5 +1,5 @@
 all:
-	go build main.go buffer.go controller.go device.go
+	go build src/main.go src/buffer.go src/controller.go src/device.go
 
 clean :
 	-rm main;
