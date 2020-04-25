@@ -5,7 +5,7 @@ package main
 
 /** The purpose of this struct is to encapsulate the FPGA client **/
 type Device struct {
-	IPAddress string
+	IPAddress string // format should be "<host>:<port>"
 	ID int
 	JobRunning bool
 	Removed bool

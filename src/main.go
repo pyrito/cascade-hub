@@ -9,7 +9,7 @@ var controller Controller
 
 func handleJobReq(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintf(w, "Received some job request...\n")
-	controller.Execute("somepath")
+	//controller.Execute("somepath")
 	fmt.Fprintf(w, "Completed job request...\n")
 }
 
@@ -24,6 +24,6 @@ func main() {
 	
 	controller.Initialize(*devices)
 	fmt.Printf("controller devices: %d\n", controller.NumDevices)
-
-	http.ListenAndServe(":8090", nil)
+	//http.ListenAndServe(":8090", nil)
+	controller.ListenToCascade()
 }
