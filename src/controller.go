@@ -1,8 +1,8 @@
 package main
 import (
 	"fmt"
-	"time"
-	"math/rand"
+	// "time"
+	// "math/rand"
 	"net"
 	//"io/ioutil"
 	// "io"
@@ -30,7 +30,7 @@ func (c *Controller) Initialize(devices int) {
 	for i := 0; i < devices; i++ {
 		// Create some dummy device
 		// Ideally we want to provision some n devices from switch, etc.
-		d := NewDevice("192.168.1.1", i, false, false, -1)
+		d := NewDevice("192.168.7.1:8800", i, false, false, -1)
 		c.Add(i, d)
 		c.Buffer.Enqueue(d)
 	}
@@ -90,11 +90,11 @@ func (c *Controller) Execute(msg RPCMessage) int {
 		panic(err)
 	}
 
-	fmt.Println("written bytes: %d\n", n)
+	fmt.Printf("written bytes: %d\n", n)
 
-	rand.Seed(time.Now().UnixNano())
-	num := rand.Intn(15000)
-	time.Sleep(time.Duration(num) * time.Millisecond)
+	// rand.Seed(time.Now().UnixNano())
+	// num := rand.Intn(15000)
+	// time.Sleep(time.Duration(num) * time.Millisecond)
 
 	fmt.Println("Task finished successfully!")
 	

@@ -23,20 +23,21 @@ func MsgToBytes(msg RPCMessage) []byte {
 	b := make([]byte, 4)
 	binary.LittleEndian.PutUint32(b, msg.msg_pid)
 	for j := 0; j < len(b); j++ {
-		buff = append(buff, b[j])
+		buff[1 + j] = b[j]
 	}
 
 	b1 := make([]byte, 4)
 	binary.LittleEndian.PutUint32(b1, msg.msg_eid)
 	for j := 0; j < len(b1); j++ {
-		buff = append(buff, b[j])
-	}
+		buff[5 + j] = b1[j]
+	} 
 
 	b2 := make([]byte, 4)
 	binary.LittleEndian.PutUint32(b2, msg.msg_eid)
 	for j := 0; j < len(b2); j++ {
-		buff = append(buff, b[j])
+		buff[9 + j] = b2[j]
 	}
+	fmt.Println(len(buff))
 	return buff
 }
 
