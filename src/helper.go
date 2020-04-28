@@ -2,10 +2,9 @@ package main
 import(
 	"bytes"
 	"encoding/binary"
-	"io"
-	"bufio"
 	"fmt"
 	"net"
+	"time"
 )
 
 type RPCMessage struct {
@@ -51,28 +50,40 @@ func ReadInt32(data []byte) uint32 {
 }
 
 /* Read the message from the connection point */
-func ReadMessage(n net.Conn) RPCMessage {
-	buff := make([]byte, 17)
-	reader := bufio.NewReader(n)
-	retry := true
+func ReadMessage(n net.Conn) []byte {
+	full_msg := make([]byte, 13)
+	buff := make([]byte, 256)
+	bytes_read := 0
+	//reader := bufio.NewReader(n)
+	// Temporary fix, should not rely on timeout
+	err := n.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
+	if err != nil {
+		fmt.Println("SetReadDeadline failed:", err)
+	}
 	// Read the amount of data needed
-	for retry {
+	for {
 		// read the full message, or return an error
-		num_read, err := io.ReadFull(reader, buff)
+		num_read, err := n.Read(buff)
 		fmt.Printf("received %d\n", num_read)
-		if err == nil {
-			retry = false
+		if err != nil {
+			//panic(err)
+			break
 		}
+		bytes_read += num_read
+		full_msg = append(full_msg, buff[:num_read]...)
 		fmt.Printf("waiting\n")
 	}
 
-	type_ := uint8(buff[4])
-	pid_ := ReadInt32(buff[5:9])
-	eid_ := ReadInt32(buff[9:13])
-	n_ := ReadInt32(buff[13:17])
+	fmt.Printf("======================\n")
+	type_ := uint8(buff[0])
+	pid_ := ReadInt32(buff[1:5])
+	eid_ := ReadInt32(buff[5:9])
+	n_ := ReadInt32(buff[9:13])
 
 	fmt.Printf("type: %d, pid: %d, eid: %d, n: %d\n", type_, pid_, eid_, n_)
-	return RPCMessage{type_, pid_, eid_, n_}
+	//return RPCMessage{type_, pid_, eid_, n_}
+	fmt.Println(full_msg)
+	return full_msg[:bytes_read]
 }
 
 

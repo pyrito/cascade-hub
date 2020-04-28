@@ -57,7 +57,12 @@ func (c *Controller) Remove(id int) {
 
 /* Built off the example Golang code */
 func (c *Controller) ListenToCascade() {
-	l, err := net.Listen("tcp", "127.0.0.1:8080")
+	laddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:9090")
+	if err != nil {
+		panic(err)
+	}
+
+	l, err := net.ListenTCP("tcp", laddr)
 	if err != nil {
 		panic(err)
 	}
@@ -76,21 +81,29 @@ func (c *Controller) ListenToCascade() {
 }
 
 /* Send the work to some provisioned FPGA */
-func (c *Controller) Execute(msg RPCMessage) int {
+func (c *Controller) Execute(msg []byte) int {
 	var d *Device = c.Buffer.Dequeue()
 
-	conn, err := net.Dial("tcp", d.IPAddress)
+	remoteAddr, err := net.ResolveTCPAddr("tcp", d.IPAddress)
+    if err != nil {
+        panic(err)
+	}
+	
+	conn, err := net.DialTCP("tcp", nil, remoteAddr)
 	if err != nil {
 		panic(err)
 	}
 	defer conn.Close()
 
-	n, err := conn.Write(MsgToBytes(msg))
+	n, err := conn.Write(msg)
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Printf("written bytes: %d\n", n)
+	// msg1 := ReadMessage(conn)
+	// fmt.Printf("msg len: %d\n", len(msg1))
+
 
 	// rand.Seed(time.Now().UnixNano())
 	// num := rand.Intn(15000)
