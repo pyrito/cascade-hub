@@ -38,8 +38,8 @@ func ReadMessage(n net.Conn) []byte {
 	for {
 		// read the full message, or return an error
 		num_read, err := n.Read(buff)
-		fmt.Printf("received %d\n", num_read)
-		fmt.Println(buff[:num_read])
+		// fmt.Printf("received %d\n", num_read)
+		// fmt.Println(buff[:num_read])
 		if err != nil {
 			//panic(err)
 			break

@@ -4,6 +4,7 @@ import (
 	// "time"
 	// "math/rand"
 	"net"
+	"fmt"
 	//"io/ioutil"
 	// "io"
 	// "bufio"
@@ -34,9 +35,10 @@ var cid uint64 = 0
 /** TODO need a connection finding phase **/
 func (c *Controller) Initialize(devices int) {
 	c.NumDevices = 0
-	c.Dmap = make(map[net.TCPConn]struct{})
-	c.Cmap = make(map[net.TCPConn]chan []byte)
-	c.CReqChan = make(chan CReq)
+	c.DBuffer = make(chan *Device, 1000)
+	c.Dmap = make(map[net.TCPConn]struct{}, 1000)
+	c.Cmap = make(map[net.TCPConn]chan []byte, 1000)
+	c.CReqChan = make(chan CReq, 1000)
 	// Add to the map and add to the buffer as well...
 	for i := 0; i < devices; i++ {
 		// Create some dummy device
@@ -47,6 +49,7 @@ func (c *Controller) Initialize(devices int) {
 		}
 		c.AddDevice(raddr)
 	}
+	fmt.Println("Done initializing...")
 }
 
 /* Add a device to the controller */
@@ -78,7 +81,7 @@ func (c *Controller) AddCascade(conn net.TCPConn) chan []byte {
 	cascades := c.Cmap
 	if _, ok := cascades[conn]; ok {
 	} else {
-		cascades[conn] = make(chan []byte)
+		cascades[conn] = make(chan []byte, 1000)
 		go c.OperateDeviceOnInstance(cascades[conn], conn)
 	}
 	return cascades[conn]
