@@ -10,6 +10,8 @@ import (
 	// "os"
 )
 
+var cascade_host string
+
 /** One type of controller scheduling property **/
 /** TODO: create some kind of interface that accepts different schedulers **/
 type Controller struct {
@@ -17,6 +19,7 @@ type Controller struct {
 	NumDevices int
 	DevicesAvailable map[int]*Device
 	Buffer DeviceBuffer
+	AddrToConn map[string]net.Conn
 }
 
 /* Ideally this needs to request the devices from another interface */
@@ -66,25 +69,25 @@ func (c *Controller) ListenToCascade() {
 	if err != nil {
 		panic(err)
 	}
-	defer l.Close()
+	// defer l.Close()
 
 	for {
 		// Wait for a connection.
-		conn, err := l.Accept()
+		conn, err := l.AcceptTCP()
+		cascade_host = conn.RemoteAddr().String()
+		fmt.Println(cascade_host)
 		if err != nil {
 			panic(err)
 		}
 		msg := ReadMessage(conn)
-		c.Execute(msg)
-		fmt.Printf("after reading messages\n")
+		c.Execute(msg, conn)
 	}
 }
 
 /* Send the work to some provisioned FPGA */
-func (c *Controller) Execute(msg []byte) int {
-	var d *Device = c.Buffer.Dequeue()
-
-	remoteAddr, err := net.ResolveTCPAddr("tcp", d.IPAddress)
+func (c *Controller) Execute(msg []byte, client *net.TCPConn) int {
+	// var d *Device = c.Buffer.Dequeue()
+	remoteAddr, err := net.ResolveTCPAddr("tcp", "192.168.7.1:8800")
     if err != nil {
         panic(err)
 	}
@@ -93,21 +96,20 @@ func (c *Controller) Execute(msg []byte) int {
 	if err != nil {
 		panic(err)
 	}
-	defer conn.Close()
+	//defer conn.Close()
 
-	n, err := conn.Write(msg)
+	_, err = conn.Write(msg)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("written bytes: %d\n", n)
-	// msg1 := ReadMessage(conn)
+	msg1 := ReadMessage(conn)
 	// fmt.Printf("msg len: %d\n", len(msg1))
 
-
-	// rand.Seed(time.Now().UnixNano())
-	// num := rand.Intn(15000)
-	// time.Sleep(time.Duration(num) * time.Millisecond)
+	_, err = client.Write(msg1)
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Println("Task finished successfully!")
 	
