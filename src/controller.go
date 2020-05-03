@@ -9,12 +9,20 @@ import (
 	// "io"
 	// "bufio"
 	// "os"
+	"github.com/vishalkuo/bimap"
+	"sync/atomic"
 )
 
 var cascade_host string
 
+type PIDPort struct {
+	PID uint64
+	Port uint64
+}
+
+/** Stuff required for each Cascade instance **/
 type CReq struct {
-	Conn *net.TCPConn
+	Conns []net.TCPConn
 	Buff []byte
 }
 
@@ -27,6 +35,11 @@ type Controller struct {
 	Dmap       map[net.TCPConn]struct{}
 	Cmap       map[net.TCPConn]chan []byte
 	CReqChan   chan CReq
+	OC1map	   *bimap.BiMap // net.TCPConn to net.TCPConn
+	OC2map 	   *bimap.BiMap // net.TCPConn to net.TCPConn
+	PIDConnmap map[uint64][]net.TCPConn
+	ConnPIDmap map[net.TCPConn]PIDPort
+	idCounter  uint64
 }
 
 var cid uint64 = 0
@@ -39,6 +52,8 @@ func (c *Controller) Initialize(devices int) {
 	c.Dmap = make(map[net.TCPConn]struct{}, 1000)
 	c.Cmap = make(map[net.TCPConn]chan []byte, 1000)
 	c.CReqChan = make(chan CReq, 1000)
+	c.OC1map = bimap.NewBiMap()
+	c.OC2map = bimap.NewBiMap()
 	// Add to the map and add to the buffer as well...
 	for i := 0; i < devices; i++ {
 		// Create some dummy device
@@ -118,6 +133,19 @@ func (c *Controller) ListenToCascade() {
 			panic(err)
 		}
 		msg := ReadMessage(conn)
+		var msg_type uint8 = uint8(msg[4])
+		// If OPEN_CONN_1
+		if msg_type == 37 {
+			// Instantiate a goroutine
+		} else {
+			msg_pid := ReadInt32(msg[5:9])
+			// If we are a OPEN_CONN_2
+			if msg_type == 38 {
+				
+			} else {
+				
+			}
+		}
 		c.CReqChan <- CReq{conn, msg}
 	}
 }
