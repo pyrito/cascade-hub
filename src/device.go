@@ -2,27 +2,37 @@ package main
 
 import (
 	"net"
-
-	"github.com/vishalkuo/bimap"
+	"sync"
 )
+
+//List of outbound ports
+var outBoundP []net.TCPAddr
+var readOutP sync.RWMutex
 
 /** The purpose of this struct is to encapsulate the FPGA client **/
 type Device struct {
-	Conns          []net.TCPConn
-	JobRunning     bool
-	ErrorCode      int
-	GlobalPID 	   uint32
-	LocalPID	   uint32
-	ConnsIndex	   int
+	GlobalPID  uint32
+	LocalPID   uint32
+	connsIndex int
+	conns      []net.TCPConn
+	raddr      net.TCPAddr
 }
 
-func NewDevice(conn net.TCPConn, running bool, err int) *Device {
+func InitializeDeviceManagement() {
+	outBoundP = make([]net.TCPAddr, 2)
+	outBoundP[0] = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+	outBoundP[1] = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+}
+
+func NewDevice(raddr net.TCPAddr) *Device {
 	var d *Device = new(Device)
-	d.Conns = make([]net.TCPConn, 3)
-	d.Conns[0] = conn
-	d.JobRunning = running
-	d.ErrorCode = err
-	d.GlobalLocalmap = bimap.NewBiMap()
+	d.conns = make([]net.TCPConn, 2)
+	d.raddr = raddr
+	readOutP.RLock()
+	d.conns[0] = net.DialTCP("tcp", outBoundP[0], raddr)
+	d.conns[1] = net.DialTCP("tcp", outBoundP[1], raddr)
+	readOutP.RUnlock()
+	connsIndex = 2
 	return d
 }
 
@@ -45,22 +55,33 @@ func (d *Device) DoFowarding(connCI net.TCPConn, connCD net.TCPConn) {
 			}
 		}
 	}
-
 }
 
-func (d *Device) setOC1(conn net.TCPConn) {
-	d.Conns[1] = conn
+func (d *Device) GetOC1() net.TCPConn {
+	return d.conns[0]
 }
 
-func (d *Device) setOC2(conn net.TCPConn) {
-	d.Conns[2] = conn
+func (d *Device) GetOC2() net.TCPConn {
+	return d.conns[1]
 }
 
-func (d *Device) getOC1() net.TCPConn {
-	return d.Conns[1]
+func (d *Device) GetNextCon() net.TCPConn {
+	if d.connIndex >= len(d.conns) {
+		readOutP.RLock()
+		if d.connIndex >= len(outBoundP) {
+			readOutP.RUnlock()
+			readOutP.Lock()
+			if d.connIndex >= len(outBoundP) {
+				outBoundP = append(outBoundP, net.ResolveTCPAddr(tcp, "127.0.0.1:0"))
+				d.conns[d.connInndex] = net.DialTCP("tcp", outBoundP[d.connIndex], raddr)
+			}
+			readOutP.Unlock()
+		} else {
+			d.conns[d.connInndex] = net.DialTCP("tcp", outBoundP[d.connIndex], raddr)
+			readOutP.RUnlock()
+		}
+	}
+	conn := d.conns[d.connIndex]
+	d.connIndex++
+	return conn
 }
-
-func (d *Device) getOC2() net.TCPConn{
-	return d.Conns[2]
-}
-
