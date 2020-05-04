@@ -37,11 +37,7 @@ var chansize = 1000
 func (c *Controller) Initialize(devices int) {
 	c.NumDevices = 0
 	c.DBuffer = make(chan *Device, 1000)
-	c.Dmap = make(map[net.TCPConn]struct{}, 1000)
-	c.Cmap = make(map[net.TCPConn]chan []byte, 1000)
 	c.CReqChan = make(chan CReq, 1000)
-	c.OC1map = bimap.NewBiMap()
-	c.OC2map = bimap.NewBiMap()
 	// Add to the map and add to the buffer as well...
 	for i := 0; i < devices; i++ {
 		// Create some dummy device
@@ -140,28 +136,6 @@ func (c *Controller) ListenToCascade() {
 func readFromConn(conn net.TCPConn, ch chan []byte) {
 	res := ReadMessage(conn)
 	ch <- res
-
-}
-
-func doFowarding(connCI net.TCPConn, connCD net.TCPconn) {
-	chCI := make(chan []byte)
-	go readFromConn(connCI, chCI)
-	chCD := make(chan []byte)
-	go readFromConn(connCD, chCD)
-	for {
-		select {
-		case msg <- chCI:
-			_, err = connCD.Write(msg)
-			if err != nil {
-				panic(err)
-			}
-		case msg <- chCD:
-			_, err = connCI.Write(msg)
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
 
 }
 
