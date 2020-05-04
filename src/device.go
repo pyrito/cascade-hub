@@ -2,14 +2,15 @@ package main
 
 import (
 	"net"
+
 	"github.com/vishalkuo/bimap"
 )
 
 /** The purpose of this struct is to encapsulate the FPGA client **/
 type Device struct {
-	Conn       *net.TCPConn
-	JobRunning bool
-	ErrorCode  int
+	Conn           *net.TCPConn
+	JobRunning     bool
+	ErrorCode      int
 	GlobalLocalmap *bimap.BiMap
 }
 

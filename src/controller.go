@@ -1,28 +1,21 @@
 package main
 
 import (
-	// "time"
-	// "math/rand"
-	"net"
 	"fmt"
-	//"io/ioutil"
-	// "io"
-	// "bufio"
-	// "os"
-	"github.com/vishalkuo/bimap"
+	"net"
 	"sync/atomic"
+
+	"github.com/vishalkuo/bimap"
 )
 
-var cascade_host string
-
 type PIDPort struct {
-	PID uint64
+	PID  uint64
 	Port uint64
 }
 
 /** Stuff required for each Cascade instance **/
 type CReq struct {
-	Conns []net.TCPConn
+	Conn net.TCPConn
 	Buff []byte
 }
 
@@ -32,17 +25,12 @@ type CReq struct {
 type Controller struct {
 	NumDevices int
 	DBuffer    chan *Device
-	Dmap       map[net.TCPConn]struct{}
-	Cmap       map[net.TCPConn]chan []byte
 	CReqChan   chan CReq
-	OC1map	   *bimap.BiMap // net.TCPConn to net.TCPConn
-	OC2map 	   *bimap.BiMap // net.TCPConn to net.TCPConn
-	PIDConnmap map[uint64][]net.TCPConn
-	ConnPIDmap map[net.TCPConn]PIDPort
+	chmap      map[uint64]CReq
 	idCounter  uint64
 }
 
-var cid uint64 = 0
+var chansize = 1000
 
 /* Ideally this needs to request the devices from another interface */
 /** TODO need a connection finding phase **/
@@ -133,46 +121,79 @@ func (c *Controller) ListenToCascade() {
 			panic(err)
 		}
 		msg := ReadMessage(conn)
-		var msg_type uint8 = uint8(msg[4])
+		var msgType uint8 = uint8(msg[4])
 		// If OPEN_CONN_1
-		if msg_type == 37 {
+		if msgType == 37 {
 			// Instantiate a goroutine
+			gid := atomic.AddU64(&c.idCounter, 1)
+			ch := make(chan CReq, chansize)
+			c.chmap[gid] = ch
+			go c.OperateDeviceOnInstance(gid, msg, ch, conn)
 		} else {
-			msg_pid := ReadInt32(msg[5:9])
+			msgGid := ReadInt32(msg[5:9])
 			// If we are a OPEN_CONN_2
-			if msg_type == 38 {
-				
-			} else {
-				
-			}
+			c.chmap[msgGid] <- CReq{conn, msg}
 		}
-		c.CReqChan <- CReq{conn, msg}
 	}
 }
 
-/** Send things to their own queue. **/
-/** TODO Deal with Cascade deaths **/
-func (c *Controller) SendToOwn() {
+func readFromConn(conn net.TCPConn, ch chan []byte) {
+	res := ReadMessage(conn)
+	ch <- res
+
+}
+
+func doFowarding(connCI net.TCPConn, connCD net.TCPconn) {
+	chCI := make(chan []byte)
+	go readFromConn(connCI, chCI)
+	chCD := make(chan []byte)
+	go readFromConn(connCD, chCD)
 	for {
-		creq := <-c.CReqChan
-		ch := c.AddCascade(*creq.Conn)
-		ch <- creq.Buff
+		select {
+		case msg <- chCI:
+			_, err = connCD.Write(msg)
+			if err != nil {
+				panic(err)
+			}
+		case msg <- chCD:
+			_, err = connCI.Write(msg)
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+
+}
+
+func handshake(conn0 net.TCPConn, conn1 net.TCPConn, msg []byte) {
+	_, err := conn1.Write(msg)
+	if err != nil {
+		panic(err)
+	}
+	res := ReadMessage(conn1)
+	_, err = conn0.Write(res)
+	if err != nil {
+		panic(err)
 	}
 }
 
 /** We instantiate one of these per cascade instance **/
-func (c *Controller) OperateDeviceOnInstance(ch chan []byte, conn net.TCPConn) {
+func (c *Controller) OperateDeviceOnInstance(gid uint64, initMsg []byte, ch chan CReq, oc1 net.TCPConn) {
+	// Get device
 	dev := <-c.DBuffer
+	conn := dev.getOC1()
+	handshake(oc1, conn)
+	go doForwarding(oc1, conn)
+
 	for {
-		msg := <-ch
-		_, err := dev.Conn.Write(msg)
-		if err != nil {
-			panic(err)
+		newCReq := <-ch
+		msgType := uint8(newCreq.msg[4])
+		if msgType == 38 {
+			conn = dev.getOC2()
+		} else {
+			conn = dev.getNextOpenConn()
 		}
-		res := ReadMessage(dev.Conn)
-		_, err = conn.Write(res)
-		if err != nil {
-			panic(err)
-		}
+		handshake(newCReq.Conn, conn)
+		go doForwarding(newCreq.Conn, conn)
 	}
 }
