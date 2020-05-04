@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"net"
+	"fmt"
 )
 
 type RPCMessage struct {
@@ -23,21 +24,24 @@ func ReadInt32(data []byte) uint32 {
 }
 
 /* Read the message from the connection point */
-func ReadMessage(n net.Conn) []byte {
+func ReadMessage(n net.TCPConn) []byte {
 	fullMsg := make([]byte, 0)
 	buff := make([]byte, 256)
 	numRead, err := n.Read(buff)
+	if err != nil {
+		panic(err)
+	}
 	if numRead < 4 {
 		panic("Protocol invariant Violated")
 	}
 
-	numToRead := ReadInt32(buff[0:3])
+	numToRead := ReadInt32(buff[0:4])
 	numToRead += 4
 	totalRead := numRead
 
 	for {
-		fullMsg = append(fullMsg, buff[:numRead])
-		numToRead -= numRead
+		fullMsg = append(fullMsg, buff[:numRead]...)
+		numToRead -= uint32(numRead)
 		// read the full message, or return an error
 		if numToRead <= 0 {
 			break

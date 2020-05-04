@@ -14,15 +14,23 @@ var readOutP sync.RWMutex
 type Device struct {
 	GID        uint32
 	PID        uint32
-	connsIndex int
+	connIndex int
 	conns      []net.TCPConn
 	raddr      net.TCPAddr
 }
 
 func InitializeDeviceManagement() {
 	outBoundP = make([]net.TCPAddr, 2)
-	outBoundP[0] = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
-	outBoundP[1] = net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+	addr0, err := net.ResolveTCPAddr("tcp", ":0")
+	if err != nil {
+		panic(err)
+	}
+	outBoundP[0] = *addr0
+	addr1, err := net.ResolveTCPAddr("tcp", ":0")
+	if err != nil {
+		panic(err)
+	}
+	outBoundP[1] = *addr1
 }
 
 func NewDevice(raddr net.TCPAddr) *Device {
@@ -30,37 +38,49 @@ func NewDevice(raddr net.TCPAddr) *Device {
 	d.conns = make([]net.TCPConn, 2)
 	d.raddr = raddr
 	readOutP.RLock()
-	d.conns[0] = net.DialTCP("tcp", outBoundP[0], raddr)
-	d.conns[1] = net.DialTCP("tcp", outBoundP[1], raddr)
+	conn0, err := net.DialTCP("tcp", &outBoundP[0], &raddr)
+	if err != nil {
+		panic(err)
+	}
+	d.conns[0] = *conn0
+	conn1, err := net.DialTCP("tcp", &outBoundP[1], &raddr)
+	if err != nil {
+		panic(err)
+	}
+	d.conns[1] = *conn1
 	readOutP.RUnlock()
-	d.connsIndex = 2
+	d.connIndex = 2
 	return d
 }
 
-func (d *Device) DoFowarding(connCI net.TCPConn, connCD net.TCPConn) {
+func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 	chCI := make(chan []byte)
 	go ReadFromConn(connCI, chCI)
 	chCD := make(chan []byte)
 	go ReadFromConn(connCD, chCD)
 	for {
 		select {
-		case msg <- chCI:
+		case msg := <- chCI:
 			gid := ReadInt32(msg[5:9])
-			if gid != dev.GID {
+			if gid != d.GID {
 				panic("YOU HAVE A DIFFERENT GID")
 			}
-			binary.LittleEndian.PutUint32(&msg[5:9], dev.PID)
-			_, err = connCD.Write(msg)
+			temp := make([]byte, 4)
+			binary.LittleEndian.PutUint32(temp, d.PID)
+			copy(msg[5:9], temp[:])
+			_, err := connCD.Write(msg)
 			if err != nil {
 				panic(err)
 			}
-		case msg <- chCD:
+		case msg := <- chCD:
 			pid := ReadInt32(msg[5:9])
-			if pid != dev.PID {
+			if pid != d.PID {
 				panic("YOU HAVE A DIFFERENT PID")
 			}
-			binary.LittleEndian.PutUint32(&msg[5:9], dev.GID)
-			_, err = connCI.Write(msg)
+			temp := make([]byte, 4)
+			binary.LittleEndian.PutUint32(temp, d.GID)
+			copy(msg[5:9], temp[:])
+			_, err := connCI.Write(msg)
 			if err != nil {
 				panic(err)
 			}
@@ -76,19 +96,31 @@ func (d *Device) GetOC2() net.TCPConn {
 	return d.conns[1]
 }
 
-func (d *Device) GetNextCon() net.TCPConn {
+func (d *Device) GetNextConn() net.TCPConn {
 	if d.connIndex >= len(d.conns) {
 		readOutP.RLock()
 		if d.connIndex >= len(outBoundP) {
 			readOutP.RUnlock()
 			readOutP.Lock()
 			if d.connIndex >= len(outBoundP) {
-				outBoundP = append(outBoundP, net.ResolveTCPAddr(tcp, "127.0.0.1:0"))
-				d.conns[d.connInndex] = net.DialTCP("tcp", outBoundP[d.connIndex], raddr)
+				laddr, err := net.ResolveTCPAddr("tcp", ":0")
+				if err != nil {
+					panic(err)
+				}
+				outBoundP = append(outBoundP, *laddr)
+				rconn, err := net.DialTCP("tcp", &outBoundP[d.connIndex], &d.raddr)
+				if err != nil {
+					panic(err)
+				}
+				d.conns[d.connIndex] = *rconn
 			}
 			readOutP.Unlock()
 		} else {
-			d.conns[d.connInndex] = net.DialTCP("tcp", outBoundP[d.connIndex], raddr)
+			rconn, err := net.DialTCP("tcp", &outBoundP[d.connIndex], &d.raddr)
+			if err != nil {
+				panic(err)
+			}
+			d.conns[d.connIndex] = *rconn
 			readOutP.RUnlock()
 		}
 	}

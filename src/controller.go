@@ -18,8 +18,7 @@ type CReq struct {
 type Controller struct {
 	NumDevices int
 	DBuffer    chan *Device
-	CReqChan   chan CReq
-	chmap      map[uint32]CReq
+	chmap      map[uint32]chan CReq
 	idCounter  uint32
 }
 
@@ -30,13 +29,13 @@ var chansize = 1000
 func (c *Controller) Initialize(devices int) {
 	c.NumDevices = 0
 	c.DBuffer = make(chan *Device, 1000)
-	c.CReqChan = make(chan CReq, 1000)
+	c.chmap = make(map[uint32]chan CReq)
 	InitializeDeviceManagement()
 	// Add to the map and add to the buffer as well...
 	for i := 0; i < devices; i++ {
 		// Create some dummy device
 		// Ideally we want to provision some n devices from switch, etc.
-		raddr, err := net.ResolveTCPAddr("tcp", "192.168.7.1:8800")
+		raddr, err := net.ResolveTCPAddr("tcp", "192.168.7.1:8820")
 		if err != nil {
 			panic(err)
 		}
@@ -54,7 +53,7 @@ func (c *Controller) AddDevice(raddr *net.TCPAddr) {
 
 /* Built off the example Golang code */
 func (c *Controller) ListenToCascade() {
-	laddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:9090")
+	laddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:7070")
 	if err != nil {
 		panic(err)
 	}
@@ -71,41 +70,46 @@ func (c *Controller) ListenToCascade() {
 		if err != nil {
 			panic(err)
 		}
-		msg := ReadMessage(conn)
+		msg := ReadMessage(*conn)
 		var msgType uint8 = uint8(msg[4])
 		// If OPEN_CONN_1
-		if msgType == 37 {
+		if msgType == 38 {
+			fmt.Println("OPEN_CONN_1")
 			// Instantiate a goroutine
-			gid := atomic.AddU32(&c.idCounter, 1)
+			gid := atomic.AddUint32(&c.idCounter, 1)
 			ch := make(chan CReq, chansize)
 			c.chmap[gid] = ch
-			go c.OperateDeviceOnInstance(gid, msg, ch, conn)
+			fmt.Printf("c.chmap[gid]: %p, ch: %p\n", c.chmap[gid], ch)
+			go c.OperateDeviceOnInstance(gid, msg, ch, *conn)
 		} else {
+			fmt.Println("Probably the OPEN_CONN_2")
 			msgGid := ReadInt32(msg[5:9])
+			fmt.Printf("msgGid: %d\n", msgGid)
 			// If we are a OPEN_CONN_2
-			c.chmap[msgGid] <- CReq{conn, msg}
+			c.chmap[msgGid] <- CReq{*conn, msg}
 		}
 	}
 }
 
 /** We instantiate one of these per cascade instance **/
-func (c *Controller) OperateDeviceOnInstance(gid uint64, initMsg []byte, ch chan CReq, oc1 net.TCPConn) {
+func (c *Controller) OperateDeviceOnInstance(gid uint32, initMsg []byte, ch chan CReq, oc1 net.TCPConn) {
 	// Get device
 	dev := <-c.DBuffer
 	conn := dev.GetOC1()
-	dev.PID := Handshake(oc1, conn)
+	dev.PID = Handshake(oc1, conn, initMsg)
+	fmt.Printf("after the handshake\n")
 	dev.GID = gid
 	go dev.DoForwarding(oc1, conn)
 
 	for {
 		newCReq := <-ch
-		msgType := uint8(newCreq.Buff[4])
-		if msgType == 38 {
+		msgType := uint8(newCReq.Buff[4])
+		if msgType == 39 {
 			conn = dev.GetOC2()
 		} else {
 			conn = dev.GetNextConn()
 		}
-		Handshake(newCReq.Conn, conn)
-		go dev.DoForwarding(newCreq.Conn, conn)
+		_ = Handshake(newCReq.Conn, conn, newCReq.Buff)
+		go dev.DoForwarding(newCReq.Conn, conn)
 	}
 }
