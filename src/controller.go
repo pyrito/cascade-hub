@@ -47,7 +47,7 @@ func (c *Controller) Initialize(devices int) {
 
 /* Add a device to the controller */
 func (c *Controller) AddDevice(raddr *net.TCPAddr) {
-	c.NumDevices += 1
+	c.NumDevices++
 	d := NewDevice(*raddr)
 	c.DBuffer <- d
 }
@@ -76,7 +76,7 @@ func (c *Controller) ListenToCascade() {
 		// If OPEN_CONN_1
 		if msgType == 37 {
 			// Instantiate a goroutine
-			gid := atomic.AddU64(&c.idCounter, 1)
+			gid := atomic.AddU32(&c.idCounter, 1)
 			ch := make(chan CReq, chansize)
 			c.chmap[gid] = ch
 			go c.OperateDeviceOnInstance(gid, msg, ch, conn)
@@ -88,41 +88,24 @@ func (c *Controller) ListenToCascade() {
 	}
 }
 
-func readFromConn(conn net.TCPConn, ch chan []byte) {
-	res := ReadMessage(conn)
-	ch <- res
-
-}
-
-func handshake(conn0 net.TCPConn, conn1 net.TCPConn, msg []byte) {
-	_, err := conn1.Write(msg)
-	if err != nil {
-		panic(err)
-	}
-	res := ReadMessage(conn1)
-	_, err = conn0.Write(res)
-	if err != nil {
-		panic(err)
-	}
-}
-
 /** We instantiate one of these per cascade instance **/
 func (c *Controller) OperateDeviceOnInstance(gid uint64, initMsg []byte, ch chan CReq, oc1 net.TCPConn) {
 	// Get device
 	dev := <-c.DBuffer
 	conn := dev.GetOC1()
-	handshake(oc1, conn)
+	dev.PID := Handshake(oc1, conn)
+	dev.GID = gid
 	go dev.DoForwarding(oc1, conn)
 
 	for {
 		newCReq := <-ch
-		msgType := uint8(newCreq.msg[4])
+		msgType := uint8(newCreq.Buff[4])
 		if msgType == 38 {
 			conn = dev.GetOC2()
 		} else {
 			conn = dev.GetNextConn()
 		}
-		handshake(newCReq.Conn, conn)
+		Handshake(newCReq.Conn, conn)
 		go dev.DoForwarding(newCreq.Conn, conn)
 	}
 }

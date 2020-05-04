@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"net"
 	"sync"
 )
@@ -11,8 +12,8 @@ var readOutP sync.RWMutex
 
 /** The purpose of this struct is to encapsulate the FPGA client **/
 type Device struct {
-	GlobalPID  uint32
-	LocalPID   uint32
+	GID        uint32
+	PID        uint32
 	connsIndex int
 	conns      []net.TCPConn
 	raddr      net.TCPAddr
@@ -32,23 +33,33 @@ func NewDevice(raddr net.TCPAddr) *Device {
 	d.conns[0] = net.DialTCP("tcp", outBoundP[0], raddr)
 	d.conns[1] = net.DialTCP("tcp", outBoundP[1], raddr)
 	readOutP.RUnlock()
-	connsIndex = 2
+	d.connsIndex = 2
 	return d
 }
 
 func (d *Device) DoFowarding(connCI net.TCPConn, connCD net.TCPConn) {
 	chCI := make(chan []byte)
-	go readFromConn(connCI, chCI)
+	go ReadFromConn(connCI, chCI)
 	chCD := make(chan []byte)
-	go readFromConn(connCD, chCD)
+	go ReadFromConn(connCD, chCD)
 	for {
 		select {
 		case msg <- chCI:
+			gid := ReadInt32(msg[5:9])
+			if gid != dev.GID {
+				panic("YOU HAVE A DIFFERENT GID")
+			}
+			binary.LittleEndian.PutUint32(&msg[5:9], dev.PID)
 			_, err = connCD.Write(msg)
 			if err != nil {
 				panic(err)
 			}
 		case msg <- chCD:
+			pid := ReadInt32(msg[5:9])
+			if pid != dev.PID {
+				panic("YOU HAVE A DIFFERENT PID")
+			}
+			binary.LittleEndian.PutUint32(&msg[5:9], dev.GID)
 			_, err = connCI.Write(msg)
 			if err != nil {
 				panic(err)

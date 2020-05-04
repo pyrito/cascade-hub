@@ -51,3 +51,22 @@ func ReadMessage(n net.Conn) []byte {
 
 	return fullMsg[:totalRead]
 }
+
+func ReadFromConn(conn net.TCPConn, ch chan []byte) {
+	res := ReadMessage(conn)
+	ch <- res
+}
+
+func Handshake(conn0 net.TCPConn, conn1 net.TCPConn, msg []byte) uint32 {
+	_, err := conn1.Write(msg)
+	if err != nil {
+		panic(err)
+	}
+	res := ReadMessage(conn1)
+	pid := ReadInt32(res[5:9])
+	_, err = conn0.Write(res)
+	if err != nil {
+		panic(err)
+	}
+	return pid
+}
