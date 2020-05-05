@@ -12,11 +12,11 @@ var readOutP sync.RWMutex
 
 /** The purpose of this struct is to encapsulate the FPGA client **/
 type Device struct {
-	GID        uint32
-	PID        uint32
+	GID       uint32
+	PID       uint32
 	connIndex int
-	conns      []net.TCPConn
-	raddr      net.TCPAddr
+	conns     []net.TCPConn
+	raddr     net.TCPAddr
 }
 
 func InitializeDeviceManagement() {
@@ -58,26 +58,25 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 	go ReadFromConn(connCI, chCI)
 	chCD := make(chan []byte)
 	go ReadFromConn(connCD, chCD)
+	temp := make([]byte, 4)
 	for {
 		select {
-		case msg := <- chCI:
+		case msg := <-chCI:
 			gid := ReadInt32(msg[5:9])
 			if gid != d.GID {
 				panic("YOU HAVE A DIFFERENT GID")
 			}
-			temp := make([]byte, 4)
 			binary.LittleEndian.PutUint32(temp, d.PID)
 			copy(msg[5:9], temp[:])
 			_, err := connCD.Write(msg)
 			if err != nil {
 				panic(err)
 			}
-		case msg := <- chCD:
+		case msg := <-chCD:
 			pid := ReadInt32(msg[5:9])
 			if pid != d.PID {
 				panic("YOU HAVE A DIFFERENT PID")
 			}
-			temp := make([]byte, 4)
 			binary.LittleEndian.PutUint32(temp, d.GID)
 			copy(msg[5:9], temp[:])
 			_, err := connCI.Write(msg)

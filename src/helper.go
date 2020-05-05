@@ -3,8 +3,8 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
-	"net"
 	"fmt"
+	"net"
 )
 
 type RPCMessage struct {
@@ -25,9 +25,11 @@ func ReadInt32(data []byte) uint32 {
 
 /* Read the message from the connection point */
 func ReadMessage(n net.TCPConn) []byte {
+	fmt.Println(n.RemoteAddr().String())
 	fullMsg := make([]byte, 0)
 	buff := make([]byte, 256)
 	numRead, err := n.Read(buff)
+	fmt.Println("Passed a read")
 	if err != nil {
 		panic(err)
 	}
@@ -46,7 +48,8 @@ func ReadMessage(n net.TCPConn) []byte {
 		if numToRead <= 0 {
 			break
 		}
-		numRead, err := n.Read(buff)
+		numRead, err = n.Read(buff)
+		fmt.Println("Passed a read")
 		if err != nil {
 			panic(err)
 		}
@@ -63,12 +66,15 @@ func ReadFromConn(conn net.TCPConn, ch chan []byte) {
 
 func Handshake(conn0 net.TCPConn, conn1 net.TCPConn, msg []byte) uint32 {
 	_, err := conn1.Write(msg)
+	fmt.Println(conn1.RemoteAddr().String())
 	if err != nil {
 		panic(err)
 	}
 	res := ReadMessage(conn1)
+	fmt.Println("READ to the above")
 	pid := ReadInt32(res[5:9])
 	_, err = conn0.Write(res)
+	fmt.Println(conn0.RemoteAddr().String())
 	if err != nil {
 		panic(err)
 	}

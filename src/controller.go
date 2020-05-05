@@ -35,7 +35,7 @@ func (c *Controller) Initialize(devices int) {
 	for i := 0; i < devices; i++ {
 		// Create some dummy device
 		// Ideally we want to provision some n devices from switch, etc.
-		raddr, err := net.ResolveTCPAddr("tcp", "192.168.7.1:8820")
+		raddr, err := net.ResolveTCPAddr("tcp", "192.168.7.1:8810")
 		if err != nil {
 			panic(err)
 		}
