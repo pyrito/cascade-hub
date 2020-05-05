@@ -16,6 +16,7 @@ type Device struct {
 	connIndex int
 	conns     []net.TCPConn
 	raddr     net.TCPAddr
+	lock      sync.RWMutex
 }
 
 func InitializeDeviceManagement() {
@@ -93,7 +94,9 @@ func (d *Device) GetOC2() net.TCPConn {
 
 func (d *Device) GetNextConn() net.TCPConn {
 	if d.connIndex >= len(d.conns) {
+		//Realize we need to access the global structure
 		readOutP.RLock()
+		var finalLAddr net.TCPAddr
 		if d.connIndex >= len(outBoundP) {
 			readOutP.RUnlock()
 			readOutP.Lock()
@@ -103,21 +106,18 @@ func (d *Device) GetNextConn() net.TCPConn {
 					panic(err)
 				}
 				outBoundP = append(outBoundP, *laddr)
-				rconn, err := net.DialTCP("tcp", &outBoundP[d.connIndex], &d.raddr)
-				if err != nil {
-					panic(err)
-				}
-				d.conns = append(d.conns, *rconn)
 			}
+			finalLAddr = outBoundP[d.connIndex]
 			readOutP.Unlock()
 		} else {
-			rconn, err := net.DialTCP("tcp", &outBoundP[d.connIndex], &d.raddr)
-			if err != nil {
-				panic(err)
-			}
-			d.conns[d.connIndex] = *rconn
+			finalLAddr = outBoundP[d.connIndex]
 			readOutP.RUnlock()
 		}
+		rconn, err := net.DialTCP("tcp", &finalLAddr, &d.raddr)
+		if err != nil {
+			panic(err)
+		}
+		d.conns = append(d.conns, *rconn)
 	}
 	conn := d.conns[d.connIndex]
 	d.connIndex++
