@@ -96,7 +96,7 @@ func (c *Controller) OperateDeviceOnInstance(gid uint32, initMsg []byte, ch chan
 	// Get device
 	dev := <-c.DBuffer
 	conn := dev.GetOC1()
-	dev.PID = Handshake(oc1, conn, initMsg)
+	dev.PID = Handshake(oc1, conn, initMsg, gid)
 	fmt.Printf("after the handshake\n")
 	dev.GID = gid
 	go dev.DoForwarding(oc1, conn)
@@ -109,7 +109,8 @@ func (c *Controller) OperateDeviceOnInstance(gid uint32, initMsg []byte, ch chan
 		} else {
 			conn = dev.GetNextConn()
 		}
-		_ = Handshake(newCReq.Conn, conn, newCReq.Buff)
+		gid := TranslateGIDPID(&newCReq.Buff, dev.PID)
+		_ = Handshake(newCReq.Conn, conn, newCReq.Buff, gid)
 		go dev.DoForwarding(newCReq.Conn, conn)
 	}
 }

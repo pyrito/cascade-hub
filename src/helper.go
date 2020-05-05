@@ -64,19 +64,24 @@ func ReadFromConn(conn net.TCPConn, ch chan []byte) {
 	ch <- res
 }
 
-func Handshake(conn0 net.TCPConn, conn1 net.TCPConn, msg []byte) uint32 {
+func Handshake(conn0 net.TCPConn, conn1 net.TCPConn, msg []byte, gid uint32) uint32 {
 	_, err := conn1.Write(msg)
-	fmt.Println(conn1.RemoteAddr().String())
 	if err != nil {
 		panic(err)
 	}
 	res := ReadMessage(conn1)
-	fmt.Println("READ to the above")
-	pid := ReadInt32(res[5:9])
+	pid := TranslateGIDPID(&res, gid)
 	_, err = conn0.Write(res)
-	fmt.Println(conn0.RemoteAddr().String())
 	if err != nil {
 		panic(err)
 	}
 	return pid
+}
+
+func TranslateGIDPID(msg *[]byte, toins uint32) uint32 {
+	temp := make([]byte, 4)
+	binary.LittleEndian.PutUint32(temp, toins)
+	old := ReadInt32((*msg)[5:9])
+	copy((*msg)[5:9], temp[:])
+	return old
 }

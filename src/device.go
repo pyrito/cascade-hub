@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/binary"
 	"net"
 	"sync"
 )
@@ -58,7 +57,6 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 	go ReadFromConn(connCI, chCI)
 	chCD := make(chan []byte)
 	go ReadFromConn(connCD, chCD)
-	temp := make([]byte, 4)
 	for {
 		select {
 		case msg := <-chCI:
@@ -66,8 +64,7 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 			if gid != d.GID {
 				panic("YOU HAVE A DIFFERENT GID")
 			}
-			binary.LittleEndian.PutUint32(temp, d.PID)
-			copy(msg[5:9], temp[:])
+			TranslateGIDPID(&msg, d.PID)
 			_, err := connCD.Write(msg)
 			if err != nil {
 				panic(err)
@@ -77,8 +74,7 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 			if pid != d.PID {
 				panic("YOU HAVE A DIFFERENT PID")
 			}
-			binary.LittleEndian.PutUint32(temp, d.GID)
-			copy(msg[5:9], temp[:])
+			TranslateGIDPID(&msg, d.GID)
 			_, err := connCI.Write(msg)
 			if err != nil {
 				panic(err)
@@ -111,7 +107,7 @@ func (d *Device) GetNextConn() net.TCPConn {
 				if err != nil {
 					panic(err)
 				}
-				d.conns[d.connIndex] = *rconn
+				d.conns = append(d.conns, *rconn)
 			}
 			readOutP.Unlock()
 		} else {
