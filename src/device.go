@@ -54,13 +54,20 @@ func NewDevice(raddr net.TCPAddr) *Device {
 }
 
 func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
+	defer connCI.Close()
+	defer connCD.Close()
+
 	chCI := make(chan []byte)
 	go ReadFromConn(connCI, chCI)
 	chCD := make(chan []byte)
 	go ReadFromConn(connCD, chCD)
+	
 	for {
 		select {
 		case msg := <-chCI:
+			if len(msg) == 0 {
+				return
+			}
 			gid := ReadInt32(msg[5:9])
 			if gid != d.GID {
 				panic("YOU HAVE A DIFFERENT GID")
@@ -71,6 +78,9 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 				panic(err)
 			}
 		case msg := <-chCD:
+			if len(msg) == 0 {
+				return
+			}
 			pid := ReadInt32(msg[5:9])
 			if pid != d.PID {
 				panic("YOU HAVE A DIFFERENT PID")

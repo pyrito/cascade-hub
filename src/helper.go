@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"io"
 )
 
 type RPCMessage struct {
@@ -29,9 +30,14 @@ func ReadMessage(n net.TCPConn) []byte {
 	fullMsg := make([]byte, 0)
 	buff := make([]byte, 256)
 	numRead, err := n.Read(buff)
-	fmt.Println("Passed a read")
 	if err != nil {
-		panic(err)
+		if err == io.EOF {
+			fmt.Printf("%s closed...\n", n.RemoteAddr().String())
+			fmt.Println(numRead)
+			return fullMsg
+		} else {
+			panic(err)
+		}
 	}
 	if numRead < 4 {
 		panic("Protocol invariant Violated")
@@ -49,7 +55,6 @@ func ReadMessage(n net.TCPConn) []byte {
 			break
 		}
 		numRead, err = n.Read(buff)
-		fmt.Println("Passed a read")
 		if err != nil {
 			panic(err)
 		}

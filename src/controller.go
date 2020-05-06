@@ -35,7 +35,7 @@ func (c *Controller) Initialize(devices int) {
 	for i := 0; i < devices; i++ {
 		// Create some dummy device
 		// Ideally we want to provision some n devices from switch, etc.
-		raddr, err := net.ResolveTCPAddr("tcp", "192.168.7.1:8810")
+		raddr, err := net.ResolveTCPAddr("tcp", "192.168.7.1:8820")
 		if err != nil {
 			panic(err)
 		}
@@ -79,10 +79,9 @@ func (c *Controller) ListenToCascade() {
 			gid := atomic.AddUint32(&c.idCounter, 1)
 			ch := make(chan CReq, chansize)
 			c.chmap[gid] = ch
-			fmt.Printf("c.chmap[gid]: %p, ch: %p\n", c.chmap[gid], ch)
 			go c.OperateDeviceOnInstance(gid, msg, ch, *conn)
 		} else {
-			fmt.Println("Probably the OPEN_CONN_2")
+			fmt.Println("Received some cascade instance request")
 			msgGid := ReadInt32(msg[5:9])
 			fmt.Printf("msgGid: %d\n", msgGid)
 			// If we are a OPEN_CONN_2
@@ -97,7 +96,6 @@ func (c *Controller) OperateDeviceOnInstance(gid uint32, initMsg []byte, ch chan
 	dev := <-c.DBuffer
 	conn := dev.GetOC1()
 	dev.PID = Handshake(oc1, conn, initMsg, gid)
-	fmt.Printf("after the handshake\n")
 	dev.GID = gid
 	go dev.DoForwarding(oc1, conn)
 
