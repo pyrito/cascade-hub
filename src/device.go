@@ -42,11 +42,13 @@ func NewDevice(raddr net.TCPAddr) *Device {
 	if err != nil {
 		panic(err)
 	}
+	conn0.SetKeepAlive(true)
 	d.conns[0] = *conn0
 	conn1, err := net.DialTCP("tcp", &outBoundP[1], &raddr)
 	if err != nil {
 		panic(err)
 	}
+	conn1.SetKeepAlive(true)
 	d.conns[1] = *conn1
 	readOutP.RUnlock()
 	d.connIndex = 2
@@ -54,9 +56,6 @@ func NewDevice(raddr net.TCPAddr) *Device {
 }
 
 func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
-	defer connCI.Close()
-	defer connCD.Close()
-
 	chCI := make(chan []byte)
 	go ReadFromConn(connCI, chCI)
 	chCD := make(chan []byte)
@@ -64,8 +63,8 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 	
 	for {
 		select {
-		case msg := <-chCI:
-			if len(msg) == 0 {
+		case msg, ok := <-chCI:
+			if !ok {
 				return
 			}
 			gid := ReadInt32(msg[5:9])
@@ -77,8 +76,8 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 			if err != nil {
 				panic(err)
 			}
-		case msg := <-chCD:
-			if len(msg) == 0 {
+		case msg, ok := <-chCD:
+			if !ok {
 				return
 			}
 			pid := ReadInt32(msg[5:9])

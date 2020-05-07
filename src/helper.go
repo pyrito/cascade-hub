@@ -25,7 +25,7 @@ func ReadInt32(data []byte) uint32 {
 }
 
 /* Read the message from the connection point */
-func ReadMessage(n net.TCPConn) []byte {
+func ReadMessage(n net.TCPConn) ([]byte, error) {
 	fmt.Println(n.RemoteAddr().String())
 	fullMsg := make([]byte, 0)
 	buff := make([]byte, 256)
@@ -33,8 +33,7 @@ func ReadMessage(n net.TCPConn) []byte {
 	if err != nil {
 		if err == io.EOF {
 			fmt.Printf("%s closed...\n", n.RemoteAddr().String())
-			fmt.Println(numRead)
-			return fullMsg
+			return fullMsg, io.EOF
 		} else {
 			panic(err)
 		}
@@ -61,26 +60,38 @@ func ReadMessage(n net.TCPConn) []byte {
 		totalRead += numRead
 	}
 
-	return fullMsg[:totalRead]
+	return fullMsg[:totalRead], nil
 }
 
 func ReadFromConn(conn net.TCPConn, ch chan []byte) {
-	res := ReadMessage(conn)
-	ch <- res
+	for {
+		res, err := ReadMessage(conn)
+		if err == io.EOF {
+			conn.Close()
+			close(ch)
+			return
+		}
+		ch <- res
+	}
 }
 
-func Handshake(conn0 net.TCPConn, conn1 net.TCPConn, msg []byte, gid uint32) uint32 {
+func Handshake(conn0 net.TCPConn, conn1 net.TCPConn, msg []byte, gid uint32) (uint32, error) {
 	_, err := conn1.Write(msg)
 	if err != nil {
 		panic(err)
 	}
-	res := ReadMessage(conn1)
+	res, err := ReadMessage(conn1)
+	if err == io.EOF {
+		conn0.Close()
+		conn1.Close()
+		return 0, err
+	}
 	pid := TranslateGIDPID(&res, gid)
 	_, err = conn0.Write(res)
 	if err != nil {
 		panic(err)
 	}
-	return pid
+	return pid, nil
 }
 
 func TranslateGIDPID(msg *[]byte, toins uint32) uint32 {

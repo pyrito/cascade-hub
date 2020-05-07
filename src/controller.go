@@ -70,7 +70,7 @@ func (c *Controller) ListenToCascade() {
 		if err != nil {
 			panic(err)
 		}
-		msg := ReadMessage(*conn)
+		msg, _ := ReadMessage(*conn)
 		var msgType uint8 = uint8(msg[4])
 		// If OPEN_CONN_1
 		if msgType == 38 {
@@ -93,9 +93,13 @@ func (c *Controller) ListenToCascade() {
 /** We instantiate one of these per cascade instance **/
 func (c *Controller) OperateDeviceOnInstance(gid uint32, initMsg []byte, ch chan CReq, oc1 net.TCPConn) {
 	// Get device
+	var err error
 	dev := <-c.DBuffer
 	conn := dev.GetOC1()
-	dev.PID = Handshake(oc1, conn, initMsg, gid)
+	dev.PID, err = Handshake(oc1, conn, initMsg, gid)
+	if err != nil {
+		panic(err)
+	}
 	dev.GID = gid
 	go dev.DoForwarding(oc1, conn)
 
@@ -108,7 +112,9 @@ func (c *Controller) OperateDeviceOnInstance(gid uint32, initMsg []byte, ch chan
 			conn = dev.GetNextConn()
 		}
 		gid := TranslateGIDPID(&newCReq.Buff, dev.PID)
-		_ = Handshake(newCReq.Conn, conn, newCReq.Buff, gid)
-		go dev.DoForwarding(newCReq.Conn, conn)
+		_, err = Handshake(newCReq.Conn, conn, newCReq.Buff, gid)
+		if err == nil {
+			go dev.DoForwarding(newCReq.Conn, conn)
+		}
 	}
 }
