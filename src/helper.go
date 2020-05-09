@@ -3,9 +3,9 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-	"net"
 	"io"
+	"net"
+	"time"
 )
 
 type RPCMessage struct {
@@ -26,17 +26,14 @@ func ReadInt32(data []byte) uint32 {
 
 /* Read the message from the connection point */
 func ReadMessage(n net.TCPConn) ([]byte, error) {
-	fmt.Println(n.RemoteAddr().String())
 	fullMsg := make([]byte, 0)
 	buff := make([]byte, 256)
 	numRead, err := n.Read(buff)
 	if err != nil {
 		if err == io.EOF {
-			fmt.Printf("%s closed...\n", n.RemoteAddr().String())
 			return fullMsg, io.EOF
-		} else {
-			panic(err)
 		}
+		panic(err)
 	}
 	if numRead < 4 {
 		panic("Protocol invariant Violated")
@@ -66,6 +63,9 @@ func ReadMessage(n net.TCPConn) ([]byte, error) {
 func ReadFromConn(conn net.TCPConn, ch chan []byte) {
 	for {
 		res, err := ReadMessage(conn)
+		//Timing
+		TimeMesg <- TReq{conn, time.Now()}
+
 		if err == io.EOF {
 			conn.Close()
 			close(ch)

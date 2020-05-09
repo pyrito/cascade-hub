@@ -3,13 +3,14 @@ package main
 import (
 	"net"
 	"sync"
+	"time"
 )
 
 //List of outbound ports
 var outBoundP []net.TCPAddr
 var readOutP sync.RWMutex
 
-/** The purpose of this struct is to encapsulate the FPGA client **/
+// The Device encapsulates the FPGA client
 type Device struct {
 	GID       uint32
 	PID       uint32
@@ -60,7 +61,7 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 	go ReadFromConn(connCI, chCI)
 	chCD := make(chan []byte)
 	go ReadFromConn(connCD, chCD)
-	
+
 	for {
 		select {
 		case msg, ok := <-chCI:
@@ -72,6 +73,8 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 				panic("YOU HAVE A DIFFERENT GID")
 			}
 			TranslateGIDPID(&msg, d.PID)
+			//Timing
+			TimeMesg <- TReq{connCI, time.Now()}
 			_, err := connCD.Write(msg)
 			if err != nil {
 				panic(err)
@@ -85,6 +88,8 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 				panic("YOU HAVE A DIFFERENT PID")
 			}
 			TranslateGIDPID(&msg, d.GID)
+			//Timing
+			TimeMesg <- TReq{connCI, time.Now()}
 			_, err := connCI.Write(msg)
 			if err != nil {
 				panic(err)
