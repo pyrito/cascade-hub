@@ -151,7 +151,7 @@ func TimeCalc(ch chan TReq, header string) {
 		} else {
 			elapsed := blah.Time.Sub(t)
 			delete(connMap, blah.Conn)
-			fmt.Println("%s: %s", header, elapsed)
+			fmt.Printf("%s: %s\n", header, elapsed)
 		}
 	}
 }

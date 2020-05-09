@@ -1,0 +1,231 @@
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 847.465µs
+CONNTIME: 4.325527ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 627.841µs
+CONNTIME: 3.880122ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+CONNTIME: 743.296µs
+MESGTIME: 3.024518ms
+Makefile:14: recipe for target 'run' failed
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 869.998µs
+CONNTIME: 4.034971ms
+Makefile:14: recipe for target 'run' failed
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 914.56µs
+CONNTIME: 4.273702ms
+Makefile:14: recipe for target 'run' failed
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 1.016292ms
+CONNTIME: 4.210341ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 957.962µs
+CONNTIME: 3.452192ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+CONNTIME: 779.237µs
+MESGTIME: 3.284977ms
+Makefile:14: recipe for target 'run' failed
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+CONNTIME: 868.304µs
+MESGTIME: 3.979852ms
+Makefile:14: recipe for target 'run' failed
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 827.979µs
+CONNTIME: 4.483274ms
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+CONNTIME: 981.746µs
+MESGTIME: 9.885432ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+CONNTIME: 550.785µs
+MESGTIME: 2.99793ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 877.417µs
+CONNTIME: 4.383782ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 817.485µs
+CONNTIME: 4.185962ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 790.944µs
+CONNTIME: 4.323186ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 811.505µs
+CONNTIME: 4.261374ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+CONNTIME: 7.941339ms
+MESGTIME: 3.564472ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+CONNTIME: 771.069µs
+MESGTIME: 4.195999ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 1.069227ms
+CONNTIME: 3.254812ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 541.556µs
+CONNTIME: 3.503703ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+CONNTIME: 941.743µs
+MESGTIME: 3.421331ms
+Makefile:14: recipe for target 'run' failed
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 858.258µs
+CONNTIME: 4.428739ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+CONNTIME: 1.075841ms
+MESGTIME: 5.481413ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 773.865µs
+CONNTIME: 4.799748ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+CONNTIME: 498.588µs
+MESGTIME: 3.836169ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+CONNTIME: 733.445µs
+MESGTIME: 3.28856ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 1.262422ms
+CONNTIME: 3.824662ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 1.562032ms
+CONNTIME: 4.864736ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+MESGTIME: 976.248µs
+CONNTIME: 5.418959ms
+Makefile:14: recipe for target 'run' failed
+go build -o ./bin/main src/helper.go src/device.go src/main.go src/controller.go
+./bin/main --devices 1
+workers: 1
+Done initializing...
+controller devices: 1
+CONNTIME: 790.437µs
+MESGTIME: 10.193108ms
+Makefile:14: recipe for target 'run' failed
