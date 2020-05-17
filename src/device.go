@@ -43,13 +43,11 @@ func NewDevice(raddr net.TCPAddr) *Device {
 	if err != nil {
 		panic(err)
 	}
-	conn0.SetKeepAlive(true)
 	d.conns[0] = *conn0
 	conn1, err := net.DialTCP("tcp", &outBoundP[1], &raddr)
 	if err != nil {
 		panic(err)
 	}
-	conn1.SetKeepAlive(true)
 	d.conns[1] = *conn1
 	readOutP.RUnlock()
 	d.connIndex = 2

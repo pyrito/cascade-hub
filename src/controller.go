@@ -54,7 +54,7 @@ func (c *Controller) Initialize(devices int) {
 	for i := 0; i < devices; i++ {
 		// Create some dummy device
 		// Ideally we want to provision some n devices from switch, etc.
-		raddr, err := net.ResolveTCPAddr("tcp", "192.168.7.1:8820")
+		raddr, err := net.ResolveTCPAddr("tcp", "192.168.7.1:8810")
 		if err != nil {
 			panic(err)
 		}
@@ -101,7 +101,6 @@ func (c *Controller) ListenToCascade() {
 			go c.OperateDeviceOnInstance(gid, msg, ch, *conn)
 		} else {
 			msgGid := ReadInt32(msg[5:9])
-			// If we are a OPEN_CONN_2
 			c.chmap[msgGid] <- CReq{*conn, msg}
 		}
 	}
@@ -126,6 +125,7 @@ func (c *Controller) OperateDeviceOnInstance(gid uint32, initMsg []byte, ch chan
 		newCReq := <-ch
 		msgType := uint8(newCReq.Buff[4])
 		if msgType == 39 {
+			fmt.Println("getting the OC2")
 			conn = dev.GetOC2()
 		} else {
 			conn = dev.GetNextConn()
@@ -136,6 +136,10 @@ func (c *Controller) OperateDeviceOnInstance(gid uint32, initMsg []byte, ch chan
 		_, err = Handshake(newCReq.Conn, conn, newCReq.Buff, gid)
 		if err == nil {
 			go dev.DoForwarding(newCReq.Conn, conn)
+		} else  {
+			fmt.Printf("Error from handshake with: ")
+			fmt.Println(conn.RemoteAddr().String())
+			fmt.Println(err)
 		}
 	}
 }

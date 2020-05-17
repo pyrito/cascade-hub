@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"time"
+	"fmt"
 )
 
 type RPCMessage struct {
@@ -26,9 +27,14 @@ func ReadInt32(data []byte) uint32 {
 
 /* Read the message from the connection point */
 func ReadMessage(n net.TCPConn) ([]byte, error) {
+	fmt.Printf("Going to read from: ")
+	fmt.Println(n.RemoteAddr().String())
 	fullMsg := make([]byte, 0)
 	buff := make([]byte, 256)
 	numRead, err := n.Read(buff)
+	fmt.Printf("Read from: ")
+	fmt.Println(n.RemoteAddr().String())
+	fmt.Println(buff)
 	if err != nil {
 		if err == io.EOF {
 			return fullMsg, io.EOF
@@ -39,24 +45,27 @@ func ReadMessage(n net.TCPConn) ([]byte, error) {
 		panic("Protocol invariant Violated")
 	}
 
-	numToRead := ReadInt32(buff[0:4])
+	numToRead := int(ReadInt32(buff[0:4]))
 	numToRead += 4
 	totalRead := numRead
 
 	for {
 		fullMsg = append(fullMsg, buff[:numRead]...)
-		numToRead -= uint32(numRead)
+		fmt.Printf("numRead: %d\n", numRead)
+		numToRead -= numRead
+		fmt.Printf("numToRead: %d\n", numToRead)
 		// read the full message, or return an error
 		if numToRead <= 0 {
 			break
 		}
 		numRead, err = n.Read(buff)
+		
 		if err != nil {
 			panic(err)
 		}
 		totalRead += numRead
 	}
-
+	fmt.Printf("after for loop read. bytes: %d\n", totalRead)
 	return fullMsg[:totalRead], nil
 }
 
