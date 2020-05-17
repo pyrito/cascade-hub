@@ -30,11 +30,11 @@ func ReadMessage(n net.TCPConn) ([]byte, error) {
 	fmt.Printf("Going to read from: ")
 	fmt.Println(n.RemoteAddr().String())
 	fullMsg := make([]byte, 0)
-	buff := make([]byte, 256)
-	numRead, err := n.Read(buff)
+	header := make([]byte, 4)
+	numRead, err := n.Read(header)
 	fmt.Printf("Read from: ")
 	fmt.Println(n.RemoteAddr().String())
-	fmt.Println(buff)
+	fmt.Println(header)
 	if err != nil {
 		if err == io.EOF {
 			return fullMsg, io.EOF
@@ -45,15 +45,14 @@ func ReadMessage(n net.TCPConn) ([]byte, error) {
 		panic("Protocol invariant Violated")
 	}
 
-	numToRead := int(ReadInt32(buff[0:4]))
+	numToRead := int(ReadInt32(header[0:4]))
+	buff := make([]byte, numToRead)
 	numToRead += 4
 	totalRead := numRead
+	fullMsg = append(fullMsg, header[:4]...)
 
 	for {
-		fullMsg = append(fullMsg, buff[:numRead]...)
-		fmt.Printf("numRead: %d\n", numRead)
 		numToRead -= numRead
-		fmt.Printf("numToRead: %d\n", numToRead)
 		// read the full message, or return an error
 		if numToRead <= 0 {
 			break
@@ -63,15 +62,19 @@ func ReadMessage(n net.TCPConn) ([]byte, error) {
 		if err != nil {
 			panic(err)
 		}
+		fullMsg = append(fullMsg, buff[:numRead]...)
 		totalRead += numRead
 	}
-	fmt.Printf("after for loop read. bytes: %d\n", totalRead)
+	fmt.Println(fullMsg[:totalRead])
 	return fullMsg[:totalRead], nil
 }
 
 func ReadFromConn(conn net.TCPConn, ch chan []byte) {
 	for {
 		res, err := ReadMessage(conn)
+		fmt.Println("we are here after ReadMessage in ReadFromConn")
+		fmt.Println(res)
+		fmt.Println(err)
 		//Timing
 		TimeMesg <- TReq{conn, time.Now()}
 
@@ -80,6 +83,7 @@ func ReadFromConn(conn net.TCPConn, ch chan []byte) {
 			close(ch)
 			return
 		}
+		fmt.Println("sending to chan")
 		ch <- res
 	}
 }

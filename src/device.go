@@ -4,6 +4,7 @@ import (
 	"net"
 	"sync"
 	"time"
+	"fmt"
 )
 
 //List of outbound ports
@@ -63,6 +64,7 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 	for {
 		select {
 		case msg, ok := <-chCI:
+			fmt.Println("got a message from chCI")
 			if !ok {
 				return
 			}
@@ -78,6 +80,7 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 				panic(err)
 			}
 		case msg, ok := <-chCD:
+			fmt.Println("got a message from chCD")
 			if !ok {
 				return
 			}
