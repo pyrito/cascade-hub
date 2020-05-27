@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"sync/atomic"
-	"time"
 )
 
 // CReq is used to house a connection and first message
@@ -12,17 +11,6 @@ type CReq struct {
 	Conn net.TCPConn
 	Buff []byte
 }
-
-// TReq is used to pass along timings
-type TReq struct {
-	Conn net.TCPConn
-	Time time.Time
-}
-
-var timeConn chan TReq
-
-//TimeMesg is a channel used to time message pass over
-var TimeMesg chan TReq
 
 // Controller dictates scheduling property
 //TODO: create some kind of interface that accepts different schedulers
@@ -44,17 +32,11 @@ func (c *Controller) Initialize(devices int) {
 	c.chmap = make(map[uint32]chan CReq)
 	InitializeDeviceManagement()
 
-	//Timing
-	timeConn = make(chan TReq, 1000)
-	TimeMesg = make(chan TReq, 1000)
-	go TimeCalc(timeConn, "CONNTIME")
-	go TimeCalc(TimeMesg, "MESGTIME")
-
 	// Add to the map and add to the buffer as well...
 	for i := 0; i < devices; i++ {
 		// Create some dummy device
 		// Ideally we want to provision some n devices from switch, etc.
-		raddr, err := net.ResolveTCPAddr("tcp", "192.168.7.1:8800")
+		raddr, err := net.ResolveTCPAddr("tcp", "192.168.7.1:8810")
 		if err != nil {
 			panic(err)
 		}
@@ -86,7 +68,7 @@ func (c *Controller) ListenToCascade() {
 	for {
 		// Wait for a connection.
 		conn, err := l.AcceptTCP()
-		timeConn <- TReq{*conn, time.Now()}
+
 		if err != nil {
 			panic(err)
 		}
@@ -100,7 +82,7 @@ func (c *Controller) ListenToCascade() {
 			c.chmap[gid] = ch
 			go c.OperateDeviceOnInstance(gid, msg, ch, *conn)
 		} else {
-			msgGid := ReadInt32(msg[5:9])
+			msgGid := ReadUInt32(msg[5:9])
 			c.chmap[msgGid] <- CReq{*conn, msg}
 		}
 	}
@@ -112,8 +94,7 @@ func (c *Controller) OperateDeviceOnInstance(gid uint32, initMsg []byte, ch chan
 	var err error
 	dev := <-c.DBuffer
 	conn := dev.GetOC1()
-	//Timing
-	timeConn <- TReq{oc1, time.Now()}
+
 	dev.PID, err = Handshake(oc1, conn, initMsg, gid)
 	if err != nil {
 		panic(err)
@@ -130,8 +111,7 @@ func (c *Controller) OperateDeviceOnInstance(gid uint32, initMsg []byte, ch chan
 			conn = dev.GetNextConn()
 		}
 		gid := TranslateGIDPID(&newCReq.Buff, dev.PID)
-		//Timing
-		timeConn <- TReq{newCReq.Conn, time.Now()}
+
 		_, err = Handshake(newCReq.Conn, conn, newCReq.Buff, gid)
 		if err == nil {
 			go dev.DoForwarding(newCReq.Conn, conn)
@@ -139,22 +119,6 @@ func (c *Controller) OperateDeviceOnInstance(gid uint32, initMsg []byte, ch chan
 			fmt.Printf("Error from handshake with: ")
 			fmt.Println(conn.RemoteAddr().String())
 			fmt.Println(err)
-		}
-	}
-}
-
-//TimeCalc used to help calculate the timing issues between things
-func TimeCalc(ch chan TReq, header string) {
-	connMap := make(map[net.TCPConn]time.Time)
-	for {
-		blah := <-timeConn
-		t, ok := connMap[blah.Conn]
-		if !ok {
-			connMap[blah.Conn] = blah.Time
-		} else {
-			elapsed := blah.Time.Sub(t)
-			delete(connMap, blah.Conn)
-			fmt.Printf("%s: %s\n", header, elapsed)
 		}
 	}
 }

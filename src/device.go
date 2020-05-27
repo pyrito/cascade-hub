@@ -3,7 +3,6 @@ package main
 import (
 	"net"
 	"sync"
-	"time"
 	"fmt"
 )
 
@@ -65,36 +64,38 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 		select {
 		case msg, ok := <-chCI:
 			fmt.Println("got a message from chCI")
+			fmt.Println(msg)
 			if !ok {
 				return
 			}
-			gid := ReadInt32(msg[5:9])
+			gid := ReadUInt32(msg[5:9])
 			if gid != d.GID {
 				panic("YOU HAVE A DIFFERENT GID")
 			}
 			TranslateGIDPID(&msg, d.PID)
-			//Timing
-			TimeMesg <- TReq{connCI, time.Now()}
+
 			_, err := connCD.Write(msg)
 			if err != nil {
 				panic(err)
 			}
+			fmt.Println("write to CD was successful")
 		case msg, ok := <-chCD:
 			fmt.Println("got a message from chCD")
+			fmt.Println(msg)
 			if !ok {
 				return
 			}
-			pid := ReadInt32(msg[5:9])
-			if pid != d.PID {
-				panic("YOU HAVE A DIFFERENT PID")
-			}
-			TranslateGIDPID(&msg, d.GID)
-			//Timing
-			TimeMesg <- TReq{connCI, time.Now()}
+			// pid := ReadInt32(msg[5:9])
+			// if pid != d.PID {
+			// 	panic("YOU HAVE A DIFFERENT PID")
+			// }
+			// TranslateGIDPID(&msg, d.GID)
+
 			_, err := connCI.Write(msg)
 			if err != nil {
 				panic(err)
 			}
+			fmt.Println("write to CI was successful")
 		}
 	}
 }

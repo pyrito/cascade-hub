@@ -5,8 +5,8 @@ import (
 	"encoding/binary"
 	"io"
 	"net"
-	"time"
 	"fmt"
+	"math"
 )
 
 type RPCMessage struct {
@@ -18,7 +18,7 @@ type RPCMessage struct {
 
 /* Credits to StackOverFlow */
 // TODO: might be bug in using uint32...
-func ReadInt32(data []byte) uint32 {
+func ReadUInt32(data []byte) uint32 {
 	var ret uint32 = 0
 	buf := bytes.NewBuffer(data)
 	binary.Read(buf, binary.LittleEndian, &ret)
@@ -27,14 +27,10 @@ func ReadInt32(data []byte) uint32 {
 
 /* Read the message from the connection point */
 func ReadMessage(n net.TCPConn) ([]byte, error) {
-	fmt.Printf("Going to read from: ")
-	fmt.Println(n.RemoteAddr().String())
 	fullMsg := make([]byte, 0)
 	header := make([]byte, 4)
 	numRead, err := n.Read(header)
-	fmt.Printf("Read from: ")
-	fmt.Println(n.RemoteAddr().String())
-	fmt.Println(header)
+
 	if err != nil {
 		if err == io.EOF {
 			return fullMsg, io.EOF
@@ -45,7 +41,8 @@ func ReadMessage(n net.TCPConn) ([]byte, error) {
 		panic("Protocol invariant Violated")
 	}
 
-	numToRead := int(ReadInt32(header[0:4]))
+	// TODO: find a better way of doing this, this is jank
+	numToRead := int(ReadUInt32(header[0:4]))
 	buff := make([]byte, numToRead)
 	numToRead += 4
 	totalRead := numRead
@@ -65,18 +62,13 @@ func ReadMessage(n net.TCPConn) ([]byte, error) {
 		fullMsg = append(fullMsg, buff[:numRead]...)
 		totalRead += numRead
 	}
-	fmt.Println(fullMsg[:totalRead])
+	//fmt.Println(fullMsg[:totalRead])
 	return fullMsg[:totalRead], nil
 }
 
 func ReadFromConn(conn net.TCPConn, ch chan []byte) {
 	for {
 		res, err := ReadMessage(conn)
-		fmt.Println("we are here after ReadMessage in ReadFromConn")
-		fmt.Println(res)
-		fmt.Println(err)
-		//Timing
-		TimeMesg <- TReq{conn, time.Now()}
 
 		if err == io.EOF {
 			conn.Close()
@@ -107,10 +99,49 @@ func Handshake(conn0 net.TCPConn, conn1 net.TCPConn, msg []byte, gid uint32) (ui
 	return pid, nil
 }
 
-func TranslateGIDPID(msg *[]byte, toins uint32) uint32 {
+// TODO: Messy code, covering just edge case work
+func TranslateGIDPID(msg *[]byte, toins uint32) uint32 {	
+	old := uint32(0)
+	off := uint32(0)
 	temp := make([]byte, 4)
 	binary.LittleEndian.PutUint32(temp, toins)
-	old := ReadInt32((*msg)[5:9])
-	copy((*msg)[5:9], temp[:])
+
+	len := ReadUInt32((*msg)[off:off+4])
+	off += 4
+	typ := uint8((*msg)[off])
+
+	// In the case that we have more than one message packed in, they're all going the same way
+	for {
+		off += 1
+		old = ReadUInt32((*msg)[off:off+4])
+		copy((*msg)[off:off+4], temp[:])
+		off += 12
+
+		// If set_input or set_state
+		if typ == 5 || typ == 7 {
+			n := ReadUInt32((*msg)[off:off+4])
+			off += 4
+			for i := uint32(0); i < n; i++ {
+				off += 4
+				bits := ((1 << 30) - 1) & ReadUInt32((*msg)[off:off+4])
+				off += uint32(math.Ceil(float64(bits) / 8)) + 4
+			}
+		} else if typ == 13 {
+			off += 4
+			bits := ((1 << 30) - 1) & ReadUInt32((*msg)[off:off+4])
+			// Make sure to read the lower 30 bits
+			off += uint32(math.Ceil(float64(bits) / 8)) + 4
+		} else if typ == 2 { 
+			// If a compilation message
+			break
+		}
+
+		if off == (len + 4) {
+			break
+		}
+
+		typ = uint8((*msg)[off])
+	}
+
 	return old
 }
