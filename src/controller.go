@@ -12,9 +12,6 @@ type CReq struct {
 	Buff []byte
 }
 
-// Controller dictates scheduling property
-//TODO: create some kind of interface that accepts different schedulers
-//TODO: Put a lock around this stuff **/
 type Controller struct {
 	NumDevices int
 	DBuffer    chan *Device
@@ -25,7 +22,7 @@ type Controller struct {
 var chansize = 1000
 
 // Initialize needs to request the devices from another interface
-// TODO need a connection finding phase
+// TODO: need a connection finding phase
 func (c *Controller) Initialize(devices int) {
 	c.NumDevices = 0
 	c.DBuffer = make(chan *Device, 1000)
@@ -45,14 +42,14 @@ func (c *Controller) Initialize(devices int) {
 	fmt.Println("Done initializing...")
 }
 
-//AddDevice is used to add a device to the controller
+// AddDevice is used to add a device to the controller
 func (c *Controller) AddDevice(raddr *net.TCPAddr) {
 	c.NumDevices++
 	d := NewDevice(*raddr)
 	c.DBuffer <- d
 }
 
-//ListenToCascade Built off the exampe GOlang code
+// ListenToCascade Built off the exampe GOlang code
 func (c *Controller) ListenToCascade() {
 	laddr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:7070")
 	if err != nil {
@@ -73,7 +70,7 @@ func (c *Controller) ListenToCascade() {
 			panic(err)
 		}
 		msg, _ := ReadMessage(*conn)
-		var msgType uint8 = uint8(msg[4])
+		var msgType uint8 = uint8(msg[8])
 		// If OPEN_CONN_1
 		if msgType == 38 {
 			// Instantiate a goroutine
@@ -82,20 +79,20 @@ func (c *Controller) ListenToCascade() {
 			c.chmap[gid] = ch
 			go c.OperateDeviceOnInstance(gid, msg, ch, *conn)
 		} else {
-			msgGid := ReadUInt32(msg[5:9])
+			msgGid := ReadUInt32(msg[4:8])
 			c.chmap[msgGid] <- CReq{*conn, msg}
 		}
 	}
 }
 
-//OperateDeviceOnInstance We instantiate one of these per cascade instance
+// OperateDeviceOnInstance We instantiate one of these per cascade instance
 func (c *Controller) OperateDeviceOnInstance(gid uint32, initMsg []byte, ch chan CReq, oc1 net.TCPConn) {
 	// Get device
 	var err error
 	dev := <-c.DBuffer
 	conn := dev.GetOC1()
 
-	dev.PID, err = Handshake(oc1, conn, initMsg, gid)
+	err = Handshake(oc1, conn, initMsg, gid)
 	if err != nil {
 		panic(err)
 	}
@@ -104,15 +101,15 @@ func (c *Controller) OperateDeviceOnInstance(gid uint32, initMsg []byte, ch chan
 
 	for {
 		newCReq := <-ch
-		msgType := uint8(newCReq.Buff[4])
+		msgType := uint8(newCReq.Buff[8])
 		if msgType == 39 {
 			conn = dev.GetOC2()
 		} else {
 			conn = dev.GetNextConn()
 		}
-		gid := TranslateGIDPID(&newCReq.Buff, dev.PID)
 
-		_, err = Handshake(newCReq.Conn, conn, newCReq.Buff, gid)
+		// No real need for this again
+		err = Handshake(newCReq.Conn, conn, newCReq.Buff, gid)
 		if err == nil {
 			go dev.DoForwarding(newCReq.Conn, conn)
 		} else  {
