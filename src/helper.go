@@ -6,7 +6,6 @@ import (
 	"io"
 	"net"
 	"fmt"
-	"math"
 )
 
 type RPCMessage struct {
@@ -28,7 +27,7 @@ func ReadUInt32(data []byte) uint32 {
 /* Read the message from the connection point */
 func ReadMessage(n net.TCPConn) ([]byte, error) {
 	fullMsg := make([]byte, 0)
-	header := make([]byte, 4)
+	header := make([]byte, 8)
 	numRead, err := n.Read(header)
 
 	if err != nil {
@@ -37,16 +36,16 @@ func ReadMessage(n net.TCPConn) ([]byte, error) {
 		}
 		panic(err)
 	}
-	if numRead < 4 {
+	if numRead < 8 {
 		panic("Protocol invariant Violated")
 	}
 
 	// TODO: find a better way of doing this, this is jank
-	numToRead := int(ReadUInt32(header[0:4]))
+	numToRead := int(ReadUInt32(header[0:8]))
 	buff := make([]byte, numToRead)
-	numToRead += 4
+	numToRead += 8
 	totalRead := numRead
-	fullMsg = append(fullMsg, header[:4]...)
+	fullMsg = append(fullMsg, header[:8]...)
 
 	for {
 		numToRead -= numRead
@@ -80,7 +79,10 @@ func ReadFromConn(conn net.TCPConn, ch chan []byte) {
 	}
 }
 
-func Handshake(conn0 net.TCPConn, conn1 net.TCPConn, msg []byte, gid uint32) (uint32, error) {
+func Handshake(conn0 net.TCPConn, conn1 net.TCPConn, msg []byte, gid uint32) error {
+	InsertGID(&msg, gid)
+	fmt.Printf("msg: ")
+	fmt.Println(msg)
 	_, err := conn1.Write(msg)
 	if err != nil {
 		panic(err)
@@ -89,59 +91,19 @@ func Handshake(conn0 net.TCPConn, conn1 net.TCPConn, msg []byte, gid uint32) (ui
 	if err == io.EOF {
 		conn0.Close()
 		conn1.Close()
-		return 0, err
+		return err
 	}
-	pid := TranslateGIDPID(&res, gid)
+	fmt.Printf("res: ")
+	fmt.Println(res)
 	_, err = conn0.Write(res)
 	if err != nil {
 		panic(err)
 	}
-	return pid, nil
+	return nil
 }
 
-// TODO: Messy code, covering just edge case work
-func TranslateGIDPID(msg *[]byte, toins uint32) uint32 {	
-	old := uint32(0)
-	off := uint32(0)
+func InsertGID(msg *[]byte, toins uint32) {
 	temp := make([]byte, 4)
 	binary.LittleEndian.PutUint32(temp, toins)
-
-	len := ReadUInt32((*msg)[off:off+4])
-	off += 4
-	typ := uint8((*msg)[off])
-
-	// In the case that we have more than one message packed in, they're all going the same way
-	for {
-		off += 1
-		old = ReadUInt32((*msg)[off:off+4])
-		copy((*msg)[off:off+4], temp[:])
-		off += 12
-
-		// If set_input or set_state
-		if typ == 5 || typ == 7 {
-			n := ReadUInt32((*msg)[off:off+4])
-			off += 4
-			for i := uint32(0); i < n; i++ {
-				off += 4
-				bits := ((1 << 30) - 1) & ReadUInt32((*msg)[off:off+4])
-				off += uint32(math.Ceil(float64(bits) / 8)) + 4
-			}
-		} else if typ == 13 {
-			off += 4
-			bits := ((1 << 30) - 1) & ReadUInt32((*msg)[off:off+4])
-			// Make sure to read the lower 30 bits
-			off += uint32(math.Ceil(float64(bits) / 8)) + 4
-		} else if typ == 2 { 
-			// If a compilation message
-			break
-		}
-
-		if off == (len + 4) {
-			break
-		}
-
-		typ = uint8((*msg)[off])
-	}
-
-	return old
+	copy((*msg)[4:8], temp[:])
 }

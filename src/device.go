@@ -6,14 +6,14 @@ import (
 	"fmt"
 )
 
-//List of outbound ports
+// List of outbound ports
 var outBoundP []net.TCPAddr
 var readOutP sync.RWMutex
 
+// TODO: device can have multiple GIDs
 // The Device encapsulates the FPGA client
 type Device struct {
 	GID       uint32
-	PID       uint32
 	connIndex int
 	conns     []net.TCPConn
 	raddr     net.TCPAddr
@@ -68,11 +68,10 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 			if !ok {
 				return
 			}
-			gid := ReadUInt32(msg[5:9])
+			gid := ReadUInt32(msg[4:8])
 			if gid != d.GID {
 				panic("YOU HAVE A DIFFERENT GID")
 			}
-			TranslateGIDPID(&msg, d.PID)
 
 			_, err := connCD.Write(msg)
 			if err != nil {
@@ -85,11 +84,6 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 			if !ok {
 				return
 			}
-			// pid := ReadInt32(msg[5:9])
-			// if pid != d.PID {
-			// 	panic("YOU HAVE A DIFFERENT PID")
-			// }
-			// TranslateGIDPID(&msg, d.GID)
 
 			_, err := connCI.Write(msg)
 			if err != nil {
@@ -110,7 +104,7 @@ func (d *Device) GetOC2() net.TCPConn {
 
 func (d *Device) GetNextConn() net.TCPConn {
 	if d.connIndex >= len(d.conns) {
-		//Realize we need to access the global structure
+		// Realize we need to access the global structure
 		readOutP.RLock()
 		var finalLAddr net.TCPAddr
 		if d.connIndex >= len(outBoundP) {
