@@ -80,8 +80,6 @@ func (c *Controller) ListenToCascade() {
 			go c.OperateDeviceOnInstance(gid, msg, ch, *conn)
 		} else {
 			msgGid := ReadUInt32(msg[4:8])
-			fmt.Printf("new conn: ")
-			fmt.Println(msg)
 			c.chmap[msgGid] <- CReq{*conn, msg}
 		}
 	}

@@ -3,7 +3,6 @@ package main
 import (
 	"net"
 	"sync"
-	"fmt"
 )
 
 // List of outbound ports
@@ -63,8 +62,6 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 	for {
 		select {
 		case msg, ok := <-chCI:
-			fmt.Println("got a message from chCI")
-			fmt.Println(msg)
 			if !ok {
 				return
 			}
@@ -77,10 +74,7 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 			if err != nil {
 				panic(err)
 			}
-			fmt.Println("write to CD was successful")
 		case msg, ok := <-chCD:
-			fmt.Println("got a message from chCD")
-			fmt.Println(msg)
 			if !ok {
 				return
 			}
@@ -89,7 +83,6 @@ func (d *Device) DoForwarding(connCI net.TCPConn, connCD net.TCPConn) {
 			if err != nil {
 				panic(err)
 			}
-			fmt.Println("write to CI was successful")
 		}
 	}
 }

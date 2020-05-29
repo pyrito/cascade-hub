@@ -5,15 +5,7 @@ import (
 	"encoding/binary"
 	"io"
 	"net"
-	"fmt"
 )
-
-type RPCMessage struct {
-	msgType uint8
-	msgPid  uint32
-	msgEid  uint32
-	msgN    uint32
-}
 
 /* Credits to StackOverFlow */
 // TODO: might be bug in using uint32...
@@ -74,15 +66,12 @@ func ReadFromConn(conn net.TCPConn, ch chan []byte) {
 			close(ch)
 			return
 		}
-		fmt.Println("sending to chan")
 		ch <- res
 	}
 }
 
 func Handshake(conn0 net.TCPConn, conn1 net.TCPConn, msg []byte, gid uint32) error {
 	InsertGID(&msg, gid)
-	fmt.Printf("msg: ")
-	fmt.Println(msg)
 	_, err := conn1.Write(msg)
 	if err != nil {
 		panic(err)
@@ -93,8 +82,6 @@ func Handshake(conn0 net.TCPConn, conn1 net.TCPConn, msg []byte, gid uint32) err
 		conn1.Close()
 		return err
 	}
-	fmt.Printf("res: ")
-	fmt.Println(res)
 	_, err = conn0.Write(res)
 	if err != nil {
 		panic(err)
